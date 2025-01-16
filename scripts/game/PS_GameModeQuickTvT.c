@@ -30,7 +30,9 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 	protected PlayerManager m_PlayerManager;
 	
 	int GetStepTime()
+	{
 		return m_iStepTime;
+	}
 	
 	override void OnGameStart()
 	{
@@ -113,17 +115,14 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 		PS_PlayableManager playableManager = PS_PlayableManager.GetInstance();
 		
 		FactionKey checkFaction = "";
-		array<PS_PlayableComponent> playables = playableManager.GetPlayablesSorted();
-		foreach (PS_PlayableComponent playable : playables)
+		array<PS_PlayableContainer> playables = playableManager.GetPlayablesSorted();
+		foreach (PS_PlayableContainer playable : playables)
 		{
-			SCR_CharacterDamageManagerComponent characterDamageManagerComponent = playable.GetCharacterDamageManagerComponent();
-			EDamageState damageState = characterDamageManagerComponent.GetState();
+			EDamageState damageState = playable.GetDamageState();
 			if (damageState == EDamageState.DESTROYED)
 				continue;
 			
-			FactionAffiliationComponent factionAffiliationComponent = playable.GetFactionAffiliationComponent();
-			Faction faction = factionAffiliationComponent.GetDefaultAffiliatedFaction();
-			FactionKey factionKey = faction.GetFactionKey();
+			FactionKey factionKey = playable.GetFactionKey();
 			if (checkFaction != "" && checkFaction != factionKey)
 			{
 				return;
