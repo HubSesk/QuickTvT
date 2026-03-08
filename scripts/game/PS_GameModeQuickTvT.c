@@ -53,7 +53,7 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 		if (m_iGameTime == 0)
 		{
 			m_iMissionNum = 0;
-			ChangeToNextMission();
+			//ChangeToNextMission();
 		}
 		
 		m_iStepTime = m_iPreviewTime;
@@ -96,16 +96,16 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 				m_iStepTime = m_iBriefingTime;
 				break;
 			case SCR_EGameModeState.GAME:
-				if (Replication.IsServer())
-					GetGame().GetCallqueue().CallLater(CheckAlive, 3000, true);
-				m_iStepTime = m_iGameTime;
+				//if (Replication.IsServer())
+				//	GetGame().GetCallqueue().CallLater(CheckAlive, 3000, true);
+				m_iStepTime = m_iGameTime + m_iFreezeTime;
 				break;
 			case SCR_EGameModeState.DEBRIEFING:
-				GetGame().GetCallqueue().Remove(CheckAlive);
+				//GetGame().GetCallqueue().Remove(CheckAlive);
 				m_iStepTime = m_iDebriefingTime;
 				break;
 			case SCR_EGameModeState.POSTGAME:
-				ChangeToNextMission();
+				//ChangeToNextMission();
 				break;
 		}
 	}
@@ -135,7 +135,7 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 		GetGame().GetCallqueue().Remove(CheckAlive);
 	}
 	
-	void ChangeToNextMission()
+	/*void ChangeToNextMission()
 	{
 		int playersCount = m_PlayerManager.GetPlayerCount();
 		
@@ -165,7 +165,7 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 			mission = m_QuickTvTMissionsConfig.Missions[m_iMissionNum];
 		}
 		GameStateTransitions.RequestScenarioChangeTransition(mission.MissionConfig, "");
-	}
+	}*/
 };
 
 class PS_QuickTvTMissionsConfig: JsonApiStruct
