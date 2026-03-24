@@ -29,6 +29,8 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 	
 	protected PlayerManager m_PlayerManager;
 	
+	protected bool m_bTimerEnabled = true;
+	
 	int GetStepTime()
 	{
 		return m_iStepTime;
@@ -37,6 +39,7 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 	override void OnGameStart()
 	{
 		super.OnGameStart();
+		AddStopTimerAction();
 		
 		if (!m_QuickTvTMissionsConfig)
 		{
@@ -64,7 +67,7 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 		if (!Replication.IsServer())
 			return;
 		
-		if (m_iStepTime > 0)
+		if (m_bTimerEnabled && m_iStepTime > 0)
 		{
 			int playersCount = m_PlayerManager.GetPlayerCount();
 			if (GetState() != SCR_EGameModeState.PREGAME || playersCount > 1)
@@ -108,6 +111,30 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 				//ChangeToNextMission();
 				break;
 		}
+	}
+	
+	void AddStopTimerAction()
+	{
+		SCR_ChatPanelManager chatPanelManager = SCR_ChatPanelManager.GetInstance();
+		ChatCommandInvoker invoker = chatPanelManager.GetCommandInvoker("stop_timer");
+		invoker.Insert(SendQTvT_Stop_CallbackAdmin);
+		invoker = chatPanelManager.GetCommandInvoker("enable_timer");
+		invoker.Insert(SendQTvT_Enable_CallbackAdmin);
+	}
+	
+	void SendQTvT_Stop_CallbackAdmin(SCR_ChatPanel panel, string data)
+	{
+		ChangeTimer(false);
+	}
+	
+	void SendQTvT_Enable_CallbackAdmin(SCR_ChatPanel panel, string data)
+	{
+		ChangeTimer(true);
+	}
+	
+	void ChangeTimer(bool value)
+	{
+		m_bTimerEnabled = value;
 	}
 	
 	void CheckAlive()
