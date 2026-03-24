@@ -1,8 +1,8 @@
 GameProject {
- ID "QuickTvT"
- GUID "60FB0A9FCE42D595"
- TITLE "QuickTvT"
+ ID "QuickTvT_Comunity"
+ GUID "68ECD9266807802E"
+ TITLE "QuickTvT_Comunity"
  Dependencies {
-  "58D0FB3206B6F859"
+  "58D0FB3206B6F859" "5EAF2B0473DB5A99"
  }
 }
