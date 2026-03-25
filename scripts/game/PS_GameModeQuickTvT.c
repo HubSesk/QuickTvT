@@ -1,3 +1,11 @@
+enum PS_ETimerCommand
+{
+	STOP,
+	START,
+	ADD,
+	MINUS
+};
+
 class PS_GameModeQuickTvTClass: PS_GameModeCoopClass
 {
 };
@@ -39,7 +47,7 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 	override void OnGameStart()
 	{
 		super.OnGameStart();
-		AddStopTimerAction();
+		GetGame().GetCallqueue().CallLater(AddCommands, 0, false);
 		
 		if (!m_QuickTvTMissionsConfig)
 		{
@@ -56,7 +64,6 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 		if (m_iGameTime == 0)
 		{
 			m_iMissionNum = 0;
-			//ChangeToNextMission();
 		}
 		
 		m_iStepTime = m_iPreviewTime;
@@ -99,42 +106,97 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 				m_iStepTime = m_iBriefingTime;
 				break;
 			case SCR_EGameModeState.GAME:
-				//if (Replication.IsServer())
-				//	GetGame().GetCallqueue().CallLater(CheckAlive, 3000, true);
 				m_iStepTime = m_iGameTime + m_iFreezeTime;
 				break;
 			case SCR_EGameModeState.DEBRIEFING:
-				//GetGame().GetCallqueue().Remove(CheckAlive);
 				m_iStepTime = m_iDebriefingTime;
 				break;
 			case SCR_EGameModeState.POSTGAME:
-				//ChangeToNextMission();
 				break;
 		}
 	}
 	
-	void AddStopTimerAction()
+	void AddCommands()
 	{
 		SCR_ChatPanelManager chatPanelManager = SCR_ChatPanelManager.GetInstance();
-		ChatCommandInvoker invoker = chatPanelManager.GetCommandInvoker("stop_timer");
-		invoker.Insert(SendQTvT_Stop_CallbackAdmin);
-		invoker = chatPanelManager.GetCommandInvoker("enable_timer");
-		invoker.Insert(SendQTvT_Enable_CallbackAdmin);
+		ChatCommandInvoker invoker = chatPanelManager.GetCommandInvoker("timer");
+		invoker.Insert(SendQTvT_Timer_CommandCallback);
 	}
 	
-	void SendQTvT_Stop_CallbackAdmin(SCR_ChatPanel panel, string data)
+	void SendQTvT_Timer_CommandCallback(SCR_ChatPanel panel, string data)
 	{
-		ChangeTimer(false);
+		PlayerController playerController = GetGame().GetPlayerController();
+		if (!playerController)
+			return;
+		
+		PS_PlayableControllerComponent playableController = 
+			PS_PlayableControllerComponent.Cast(playerController.FindComponent(PS_PlayableControllerComponent));
+		if (!playableController)
+			return;
+		
+		if (!PS_PlayersHelper.IsAdminOrServer())
+			return;
+		
+		data = data.Trim();
+		string dataLower = data;
+		dataLower.ToLower();
+		
+		string subCommand;
+		int timeValue = 0;
+		
+		int spaceIndex = dataLower.IndexOf(" ");
+		if (spaceIndex > -1)
+		{
+			subCommand = dataLower.Substring(0, spaceIndex);
+			string valueStr = dataLower.Substring(spaceIndex + 1, dataLower.Length() - spaceIndex - 1);
+			valueStr = valueStr.Trim();
+			timeValue = valueStr.ToInt();
+		}
+		else
+		{
+			subCommand = dataLower;
+		}
+		
+		switch (subCommand)
+		{
+			case "stop":
+				playableController.SendQTvTTimerCommand(PS_ETimerCommand.STOP, 0);
+				break;
+			case "start":
+				playableController.SendQTvTTimerCommand(PS_ETimerCommand.START, 0);
+				break;
+			case "add":
+				if (timeValue > 0)
+					playableController.SendQTvTTimerCommand(PS_ETimerCommand.ADD, timeValue);
+				break;
+			case "minus":
+				if (timeValue > 0)
+					playableController.SendQTvTTimerCommand(PS_ETimerCommand.MINUS, timeValue);
+				break;
+		}
 	}
 	
-	void SendQTvT_Enable_CallbackAdmin(SCR_ChatPanel panel, string data)
+	void ProcessTimerCommand(PS_ETimerCommand command, int value)
 	{
-		ChangeTimer(true);
-	}
-	
-	void ChangeTimer(bool value)
-	{
-		m_bTimerEnabled = value;
+		switch (command)
+		{
+			case PS_ETimerCommand.STOP:
+				m_bTimerEnabled = false;
+				break;
+			case PS_ETimerCommand.START:
+				m_bTimerEnabled = true;
+				break;
+			case PS_ETimerCommand.ADD:
+				m_iStepTime += value * 1000;
+				Replication.BumpMe();
+				break;
+			case PS_ETimerCommand.MINUS:
+				m_iStepTime -= value * 1000;
+				if (m_iStepTime < 0)
+					m_iStepTime = 1;
+				Replication.BumpMe();
+				break;
+		}
 	}
 	
 	void CheckAlive()
@@ -161,38 +223,6 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 		AdvanceGameState(SCR_EGameModeState.GAME);
 		GetGame().GetCallqueue().Remove(CheckAlive);
 	}
-	
-	/*void ChangeToNextMission()
-	{
-		int playersCount = m_PlayerManager.GetPlayerCount();
-		
-		// Get next mission
-		m_iMissionNum++;
-		if (m_iMissionNum >= m_QuickTvTMissionsConfig.Missions.Count())
-		{
-			m_iMissionNum = 0;
-			m_QuickTvTMissionsConfig.SortRandom();
-		}
-		PS_QuickTvTMission mission = m_QuickTvTMissionsConfig.Missions[m_iMissionNum];
-		
-		// skip to next valide
-		int i = 0;
-		while (mission.MinPlayers > playersCount || mission.MaxPlayers < playersCount)
-		{
-			i++;
-			if (i > 100) break;
-			
-			m_iMissionNum++;
-			if (m_iMissionNum >= m_QuickTvTMissionsConfig.Missions.Count())
-			{
-				m_iMissionNum = 0;
-				m_QuickTvTMissionsConfig.SortRandom();
-			}
-			
-			mission = m_QuickTvTMissionsConfig.Missions[m_iMissionNum];
-		}
-		GameStateTransitions.RequestScenarioChangeTransition(mission.MissionConfig, "");
-	}*/
 };
 
 class PS_QuickTvTMissionsConfig: JsonApiStruct
@@ -216,7 +246,6 @@ class PS_QuickTvTMissionsConfig: JsonApiStruct
 	}
 }
 
-
 class PS_QuickTvTMission: JsonApiStruct
 {
 	string MissionConfig;
@@ -231,23 +260,18 @@ class PS_QuickTvTMission: JsonApiStruct
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+modded class PS_PlayableControllerComponent
+{
+	void SendQTvTTimerCommand(PS_ETimerCommand command, int value)
+	{
+		Rpc(RPC_SendQTvTTimerCommand, command, value);
+	}
+	
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	void RPC_SendQTvTTimerCommand(PS_ETimerCommand command, int value)
+	{
+		PS_GameModeQuickTvT gameMode = PS_GameModeQuickTvT.Cast(GetGame().GetGameMode());
+		if (gameMode)
+			gameMode.ProcessTimerCommand(command, value);
+	}
+}
