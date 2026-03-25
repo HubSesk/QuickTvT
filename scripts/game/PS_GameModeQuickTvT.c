@@ -223,55 +223,58 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 		AdvanceGameState(SCR_EGameModeState.GAME);
 		GetGame().GetCallqueue().Remove(CheckAlive);
 	}
-};
-
-class PS_QuickTvTMissionsConfig: JsonApiStruct
-{
-	ref array<ref PS_QuickTvTMission> Missions = {};
-	ref RandomGenerator m_RandomGenerator = new RandomGenerator();
 	
-	void SortRandom()
+	override bool CanJoinFaction(FactionKey factionKeyPlayer, FactionKey currentFaction)
 	{
-		array<ref PS_QuickTvTMission> MissionsNew = {};
-		foreach (PS_QuickTvTMission mission : Missions)
+		if (m_iFactionsBalance == -1)
+			return true;
+		if (factionKeyPlayer == currentFaction)
+			return true;
+		
+		map<FactionKey, int> players = new map<FactionKey, int>();
+		map<FactionKey, int> playables = new map<FactionKey, int>();
+		map<FactionKey, float> desiredratio = new map<FactionKey, float>();
+		array<PS_PlayableContainer> playableComponents = m_playableManager.GetPlayablesSorted();
+		
+		//counting avaivable slots
+		int playablesammount = 0;
+		foreach (PS_PlayableContainer playable : playableComponents)
 		{
-			MissionsNew.InsertAt(mission, m_RandomGenerator.RandInt(0, MissionsNew.Count()));
+			playablesammount = playablesammount + 1;
+			FactionKey factionKey = playable.GetFactionKey();
+			if (!players.Contains(factionKey))
+				players[factionKey] = 0;
+			if (!playables.Contains(factionKey))
+				playables[factionKey] = 0;
+			
+			playables[factionKey] = playables[factionKey] + 1;
+			int playerId = m_playableManager.GetPlayerByPlayable(playable.GetRplId());
+			if (playerId > 0)
+			{
+				players[factionKey] = players[factionKey] + 1;
+			}
+			
 		}
-		Missions = MissionsNew;
+		if (currentFaction != "")
+			players[currentFaction] = players[currentFaction] - 1;
+		
+		//counting how much there are factons units compared to every unit
+		int playersCount = m_PlayerManager.GetPlayerCount();
+		foreach (FactionKey factionKey, int count: playables)
+		{	
+			desiredratio[factionKey] = count / playablesammount; 
+		}
+		//clamping avaivable over the ratio slots in proportion to current player count to ensure balance for small scenarios
+		int adjfactionsbalance = Math.Clamp(m_iFactionsBalance,1,(playersCount / 10));
+		
+		if (players[factionKeyPlayer] < 1)
+		{
+			//but we still want to get one player even in tiniest scenario
+			return true;
+		}
+		//check if that faction with a new player wouldnt get too many players
+		float ratio = (players[factionKeyPlayer] + 1 - adjfactionsbalance) / playersCount;
+		
+		return ratio <= desiredratio[factionKeyPlayer];
 	}
-	
-	void PS_QuickTvTMissionsConfig()
-	{
-		RegV("Missions");
-	}
-}
-
-class PS_QuickTvTMission: JsonApiStruct
-{
-	string MissionConfig;
-	int MinPlayers;
-	int MaxPlayers;
-	
-	void PS_QuickTvTMission()
-	{
-		RegV("MissionConfig");
-		RegV("MinPlayers");
-		RegV("MaxPlayers");
-	}
-}
-
-modded class PS_PlayableControllerComponent
-{
-	void SendQTvTTimerCommand(PS_ETimerCommand command, int value)
-	{
-		Rpc(RPC_SendQTvTTimerCommand, command, value);
-	}
-	
-	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
-	void RPC_SendQTvTTimerCommand(PS_ETimerCommand command, int value)
-	{
-		PS_GameModeQuickTvT gameMode = PS_GameModeQuickTvT.Cast(GetGame().GetGameMode());
-		if (gameMode)
-			gameMode.ProcessTimerCommand(command, value);
-	}
-}
+};
