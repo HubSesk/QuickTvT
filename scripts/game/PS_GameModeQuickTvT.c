@@ -73,16 +73,22 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 	{
 		if (!Replication.IsServer())
 			return;
-		
+
 		if (m_bTimerEnabled && m_iStepTime > 0)
 		{
+			if (!m_PlayerManager)
+				m_PlayerManager = GetGame().GetPlayerManager();
+
+			if (!m_PlayerManager)
+				return;
+
 			int playersCount = m_PlayerManager.GetPlayerCount();
 			if (GetState() != SCR_EGameModeState.PREGAME || playersCount > 1)
 				m_iStepTime -= timeSlice * 1000;
-			
+
 			if (m_iStepTime <= 0)
 				AdvanceGameState(GetState());
-			
+
 			Replication.BumpMe();
 		}
 	}
@@ -119,7 +125,13 @@ class PS_GameModeQuickTvT : PS_GameModeCoop
 	void AddCommands()
 	{
 		SCR_ChatPanelManager chatPanelManager = SCR_ChatPanelManager.GetInstance();
+		if (!chatPanelManager)
+			return;
+
 		ChatCommandInvoker invoker = chatPanelManager.GetCommandInvoker("timer");
+		if (!invoker)
+			return;
+
 		invoker.Insert(SendQTvT_Timer_CommandCallback);
 	}
 	

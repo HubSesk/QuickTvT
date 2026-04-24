@@ -44,16 +44,19 @@ modded class PS_CharacterSelector
 		
 		if (playerId != m_iPlayerId)
 		{
-			if (!CanJoinFaction())
+		if (!CanJoinFaction())
+		{
+			SCR_ChatPanelManager chatPanelManager = SCR_ChatPanelManager.GetInstance();
+			if (chatPanelManager)
 			{
-				
-				SCR_ChatPanelManager chatPanelManager = SCR_ChatPanelManager.GetInstance();
 				ChatCommandInvoker invoker = chatPanelManager.GetCommandInvoker("lmsg");
-				invoker.Invoke(null, "Где баланс?");
-				SCR_ChatPanelManager.GetInstance().ShowHelpMessage("Соблюдайте баланс сторон");
-				m_CoopLobby.SetPreviewPlayable(m_iPlayableId, true);
-				return;
+				if (invoker)
+					invoker.Invoke(null, "Где баланс?");
+				chatPanelManager.ShowHelpMessage("Соблюдайте баланс сторон");
 			}
+			m_CoopLobby.SetPreviewPlayable(m_iPlayableId, true);
+			return;
+		}
 			
 			AudioSystem.PlaySound("{9500A96BBA3B0581}Sounds/UI/Samples/Menu/UI_Gadget_Select.wav");
 			m_PlayableControllerComponent.MoveToVoNRoom(playerId, m_sFactionKey, m_sPlayableCallsign);

@@ -16,15 +16,21 @@ modded class PS_GameModeHeader
 	
 	void UpdateTimer()
 	{
-		if (!m_GameMode)
+		if (!m_GameMode || !m_StepTimerText)
 			return;
-		
+
 		int time = m_GameMode.GetStepTime() + 999;
-		
+
 		int seconds = time/1000;
 		int minutes = seconds / 60;
 		seconds = Math.Mod(seconds, 60);
-		
+
 		m_StepTimerText.SetTextFormat("%1:%2", minutes.ToString(2), seconds.ToString(2));
+	}
+
+	override void HandlerDeattached(Widget w)
+	{
+		GetGame().GetCallqueue().Remove(UpdateTimer);
+		super.HandlerDeattached(w);
 	}
 }

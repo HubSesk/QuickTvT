@@ -11,7 +11,8 @@ modded class PS_PlayableManager
 		if (m_iStartTimerCounter == 0)
 		{
 			PS_GameModeCoop gameModeCoop = PS_GameModeCoop.Cast(GetGame().GetGameMode());
-			gameModeCoop.AdvanceGameState(SCR_EGameModeState.BRIEFING);
+			if (gameModeCoop)
+				gameModeCoop.AdvanceGameState(SCR_EGameModeState.BRIEFING);
 			GetGame().GetCallqueue().Remove(StartTimeBriefing);
 		}
 	}
@@ -42,11 +43,15 @@ modded class PS_PlayableManager
 		{
 			m_bFactionsReadySended = true;
 			
-			SCR_ChatPanelManager chatPanelManager = SCR_ChatPanelManager.GetInstance();
+		SCR_ChatPanelManager chatPanelManager = SCR_ChatPanelManager.GetInstance();
+		if (chatPanelManager)
+		{
 			ChatCommandInvoker invoker = chatPanelManager.GetCommandInvoker("tmsg");
-			invoker.Invoke(null, "Factions ready");
-			
-			SCR_ChatPanelManager.GetInstance().ShowHelpMessage("Factions ready");
+			if (invoker)
+				invoker.Invoke(null, "Factions ready");
+
+			chatPanelManager.ShowHelpMessage("Factions ready");
+		}
 			///now we start countdown to stage advance
 			
 			m_iStartTimerCounter = 3;
