@@ -1,3 +1,5 @@
+#define QTVT_COMMUNITY
+
 enum PS_ETimerCommand
 {
 	STOP,
